@@ -1,5 +1,5 @@
-Wrapper command for running staging application
-===============================================
+Utility to create user ERF file
+===============================
 
 This is an utility to write Explicit Resource File (ERF) file.
 
