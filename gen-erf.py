@@ -114,7 +114,7 @@ def main():
     parser0.add_argument('--smt', help='smt', type=int, default=1)
     parser0.add_argument('--ppn', help='ppn', type=int, default=42)
     parser0.add_argument('--outfile', help='outfile', default='erf_file')
-    parser0.add_argument('--randomize', help='randomize', default=False, action='store_true')
+    parser0.add_argument('--shuffle', help='shuffle', default=False, action='store_true')
 
     parser1 = argparse.ArgumentParser(prog='HYPERSLAB', add_help=False)
     parser1.add_argument('HYPERSLAB', help="hyperslab selection (offset,block[,stride,[count]]:command[:-g]])", nargs='+')
@@ -155,7 +155,7 @@ def main():
     ppn = args.ppn
     smt = args.smt
     outfile = args.outfile
-    randomize = args.randomize
+    shuffle = args.shuffle
 
     ntotal = 0
     for cmd in cmds:
@@ -181,7 +181,7 @@ def main():
                 gpu.append(g)
 
     nodeindex=list(range(ntotal))
-    if randomize:
+    if shuffle:
         random.shuffle(nodeindex)
     apps = list(collections.OrderedDict.fromkeys(app))
 
