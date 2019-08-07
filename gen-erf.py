@@ -121,7 +121,7 @@ def main():
     parser1.add_argument('--nnodes', help='nnodes', type=int, default=1)
 
     cmds = cmdlist(sys.argv[1:])
-    if len(cmds) < 2:
+    if len(cmds) < 1:
         usage()
 
     ## hyperselect: offset,block,stride,count
