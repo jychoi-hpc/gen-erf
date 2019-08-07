@@ -5,6 +5,7 @@ import argparse
 import collections
 import logging
 import sys
+import random
 
 def cmdlist(argv):
     '''
@@ -113,6 +114,7 @@ def main():
     parser0.add_argument('--smt', help='smt', type=int, default=1)
     parser0.add_argument('--ppn', help='ppn', type=int, default=42)
     parser0.add_argument('--outfile', help='outfile', default='erf_file')
+    parser0.add_argument('--randomize', help='randomize', default=False, action='store_true')
 
     parser1 = argparse.ArgumentParser(prog='HYPERSLAB', add_help=False)
     parser1.add_argument('HYPERSLAB', help="hyperslab selection (offset,block[,stride,[count]]:command[:-g]])", nargs='+')
@@ -153,11 +155,14 @@ def main():
     ppn = args.ppn
     smt = args.smt
     outfile = args.outfile
+    randomize = args.randomize
 
+    ntotal = 0
     for cmd in cmds:
         args, _unknown = parser1.parse_known_args(cmd)
         if len(_unknown) > 0:
             usage()
+        ntotal += args.nnodes
 
         for i, exp in enumerate(args.HYPERSLAB):
             tk = exp.split(':')
@@ -175,11 +180,14 @@ def main():
                 app.append(nm)
                 gpu.append(g)
 
+    nodeindex=list(range(ntotal))
+    if randomize:
+        random.shuffle(nodeindex)
     apps = list(collections.OrderedDict.fromkeys(app))
 
     logging.debug ('PPN: %d' % ppn)
     logging.debug ('SMT: %d' % smt)
-    
+
     f = open(outfile, "w")
     for i, cmdline in enumerate(apps):
         f.write("app %d: %s\n"%(i, cmdline))
@@ -237,11 +245,11 @@ def main():
             for i, (rx, nm, g) in enumerate(zip(lst, app, gpu)):
                 if g == 1:
                     f.write("rank: %d: { host: %d; cpu: %s ; gpu: {%d} ; mem: %s } : app %d\n"\
-                        %(rank, n+1, range2str(rx, smt), gid, mem2str(rx), apps.index(nm)))
+                        %(rank, nodeindex[n]+1, range2str(rx, smt), gid, mem2str(rx), apps.index(nm)))
                     gid += 1
                 else:
                     f.write("rank: %d: { host: %d; cpu: %s ; mem: %s } : app %d\n"\
-                        %(rank, n+1, range2str(rx, smt), mem2str(rx), apps.index(nm)))
+                        %(rank, nodeindex[n]+1, range2str(rx, smt), mem2str(rx), apps.index(nm)))
                 rank += 1
             gid = 0
             m0index = 0
