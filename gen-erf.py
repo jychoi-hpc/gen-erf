@@ -116,6 +116,8 @@ def main():
     parser0.add_argument('--outfile', help='outfile', default='erf_file')
     parser0.add_argument('--shuffle', help='shuffle', default=False, action='store_true')
     parser0.add_argument('--shufflerank', help='shufflerank', default=False, action='store_true')
+    parser0.add_argument('--sortbyapp', help='sortbyapp', default=False, action='store_true')
+    parser0.add_argument('--shufflebyapp', help='shufflebyapp', default=False, action='store_true')
 
     parser1 = argparse.ArgumentParser(prog='HYPERSLAB', add_help=False)
     parser1.add_argument('HYPERSLAB', help="hyperslab selection (offset,block[,stride,[count]]:command[:-g]])", nargs='+')
@@ -158,13 +160,24 @@ def main():
     outfile = args.outfile
     shuffle = args.shuffle
     shufflerank = args.shufflerank
+    sortbyapp = args.sortbyapp
+    shufflebyapp = args.shufflebyapp
 
+    logging.debug ('PPN: %d' % ppn)
+    logging.debug ('SMT: %d' % smt)
+
+    item_all = []
     ntotal = 0
     for cmd in cmds:
         args, _unknown = parser1.parse_known_args(cmd)
         if len(_unknown) > 0:
             usage()
-        ntotal += args.nnodes
+        nnodes = args.nnodes
+        ntotal += nnodes
+
+        lst = []
+        app = []
+        gpu = []
 
         for i, exp in enumerate(args.HYPERSLAB):
             tk = exp.split(':')
@@ -182,16 +195,54 @@ def main():
                 app.append(nm)
                 gpu.append(g)
 
+        ## Verbose
+        logging.debug('Selected:')
+        for i, (rx, nm, g) in enumerate(zip(lst, app, gpu)):
+            logging.debug((i, rx, nm, g))
+
+        ## Check any duplication
+        dset = set()
+        for x in lst:
+            for r0, r1 in x:
+                xs = set(range(r0, r1))
+                ys = dset.intersection(xs)
+                assert len(ys)==0, "Duplicated: %s"%(ys)
+                dset.update(xs)
+
+        item = []
+        for n in range(nnodes):
+            for i, (rx, nm, g) in enumerate(zip(lst, app, gpu)):
+                item.append((rx, nm, g))
+        item_all.append(item)
+
     nodeindex=list(range(ntotal))
     if shuffle:
         random.shuffle(nodeindex)
-    apps = list(collections.OrderedDict.fromkeys(app))
-    rankindex = list(range(len(app)*ntotal))
-    if shufflerank:
-        random.shuffle(rankindex)
+    
+    ax = np.array([ x[1] for item in item_all for x in item ])
+    rankindex = np.arange(len(ax))
 
-    logging.debug ('PPN: %d' % ppn)
-    logging.debug ('SMT: %d' % smt)
+    apps = list(collections.OrderedDict.fromkeys(ax))
+
+    if shufflerank:
+        rankindex = np.random.permutation(len(ax))
+        ax = ax[np.argsort(rankindex)]
+    
+    if shufflebyapp:
+        p = None
+        offset = 0
+        for x in apps:
+            n = len(ax[ax == x])
+            if p is None:
+                p = np.random.permutation(n)
+            rankindex[ax == x] = p+offset
+            offset += n
+        ax = ax[np.argsort(rankindex)]
+
+    if sortbyapp:
+        aid = [ apps.index(x) for x in ax ]
+        rankindex = rankindex[np.argsort(aid, kind='stable')]
+        ax = ax[np.argsort(rankindex)]
 
     f = open(outfile, "w")
     for i, cmdline in enumerate(apps):
@@ -231,20 +282,6 @@ def main():
                 lst.append(x)
                 app.append(nm)
                 gpu.append(g)
-
-        ## Verbose
-        logging.debug('Selected:')
-        for i, (rx, nm, g) in enumerate(zip(lst, app, gpu)):
-            logging.debug((i, rx, nm, g))
-
-        ## Check any duplication
-        dset = set()
-        for x in lst:
-            for r0, r1 in x:
-                xs = set(range(r0, r1))
-                ys = dset.intersection(xs)
-                assert len(ys)==0, "Duplicated: %s"%(ys)
-                dset.update(xs)
 
         for n in range(m, m+nnodes):
             for i, (rx, nm, g) in enumerate(zip(lst, app, gpu)):
