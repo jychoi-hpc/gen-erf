@@ -115,6 +115,7 @@ def main():
     parser0.add_argument('--ppn', help='ppn', type=int, default=42)
     parser0.add_argument('--outfile', help='outfile', default='erf_file')
     parser0.add_argument('--shuffle', help='shuffle', default=False, action='store_true')
+    parser0.add_argument('--shufflerank', help='shufflerank', default=False, action='store_true')
 
     parser1 = argparse.ArgumentParser(prog='HYPERSLAB', add_help=False)
     parser1.add_argument('HYPERSLAB', help="hyperslab selection (offset,block[,stride,[count]]:command[:-g]])", nargs='+')
@@ -156,6 +157,7 @@ def main():
     smt = args.smt
     outfile = args.outfile
     shuffle = args.shuffle
+    shufflerank = args.shufflerank
 
     ntotal = 0
     for cmd in cmds:
@@ -184,6 +186,9 @@ def main():
     if shuffle:
         random.shuffle(nodeindex)
     apps = list(collections.OrderedDict.fromkeys(app))
+    rankindex = list(range(len(app)))
+    if shufflerank:
+        random.shuffle(rankindex)
 
     logging.debug ('PPN: %d' % ppn)
     logging.debug ('SMT: %d' % smt)
@@ -245,11 +250,11 @@ def main():
             for i, (rx, nm, g) in enumerate(zip(lst, app, gpu)):
                 if g == 1:
                     f.write("rank: %d: { host: %d; cpu: %s ; gpu: {%d} ; mem: %s } : app %d\n"\
-                        %(rank, nodeindex[n]+1, range2str(rx, smt), gid, mem2str(rx), apps.index(nm)))
+                        %(rankindex[rank], nodeindex[n]+1, range2str(rx, smt), gid, mem2str(rx), apps.index(nm)))
                     gid += 1
                 else:
                     f.write("rank: %d: { host: %d; cpu: %s ; mem: %s } : app %d\n"\
-                        %(rank, nodeindex[n]+1, range2str(rx, smt), mem2str(rx), apps.index(nm)))
+                        %(rankindex[rank], nodeindex[n]+1, range2str(rx, smt), mem2str(rx), apps.index(nm)))
                 rank += 1
             gid = 0
             m0index = 0
