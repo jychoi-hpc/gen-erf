@@ -186,7 +186,7 @@ def main():
     if shuffle:
         random.shuffle(nodeindex)
     apps = list(collections.OrderedDict.fromkeys(app))
-    rankindex = list(range(len(app)))
+    rankindex = list(range(len(app)*ntotal))
     if shufflerank:
         random.shuffle(rankindex)
 
