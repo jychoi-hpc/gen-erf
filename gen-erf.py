@@ -168,6 +168,7 @@ def main():
 
     item_all = []
     ntotal = 0
+    m = 0
     for cmd in cmds:
         args, _unknown = parser1.parse_known_args(cmd)
         if len(_unknown) > 0:
@@ -210,9 +211,15 @@ def main():
                 dset.update(xs)
 
         item = []
-        for n in range(nnodes):
+        for nid in range(m, m+nnodes):
+            gid = 0
+            m0index = 0
+            m1index = 0
             for i, (rx, nm, g) in enumerate(zip(lst, app, gpu)):
-                item.append((rx, nm, g))
+                item.append((rx, nm, g, nid, gid, mem2str(rx)))
+                if g == 1:
+                    gid += 1
+        m += nnodes
         item_all.append(item)
 
     nodeindex=list(range(ntotal))
@@ -255,49 +262,18 @@ def main():
     f.write("oversubscribe_mem: allow\n")
     f.write("launch_distribution: packed\n")
 
-    gid = 0
     rank = 0
-    m = 0
+    for item in item_all:
+        for rx, nm, g, n, gid, mx in item:
+            print (rx, nm, g, n, gid, mx)
+            if g == 1:
+                f.write("rank: %d: { host: %d; cpu: %s ; gpu: {%d} ; mem: %s } : app %d\n"\
+                    %(rankindex[rank], nodeindex[n]+1, range2str(rx, smt), gid, mx, apps.index(nm)))
+            else:
+                f.write("rank: %d: { host: %d; cpu: %s ; mem: %s } : app %d\n"\
+                    %(rankindex[rank], nodeindex[n]+1, range2str(rx, smt), mx, apps.index(nm)))
 
-    for cmd in cmds:
-        args, _unknown = parser1.parse_known_args(cmd)
-        nnodes = args.nnodes
-
-        lst = []
-        app = []
-        gpu = []
-
-        for i, exp in enumerate(args.HYPERSLAB):
-            tk = exp.split(':')
-            exp = tk[0]
-
-            nm = 'app%d'%(i)
-            g = 0
-            if len(tk) > 1:
-                nm = tk[1]
-            if len(tk) > 2:
-                if tk[2] == '-g': g = 1
-
-            for x in process(exp):
-                lst.append(x)
-                app.append(nm)
-                gpu.append(g)
-
-        for n in range(m, m+nnodes):
-            for i, (rx, nm, g) in enumerate(zip(lst, app, gpu)):
-                if g == 1:
-                    f.write("rank: %d: { host: %d; cpu: %s ; gpu: {%d} ; mem: %s } : app %d\n"\
-                        %(rankindex[rank], nodeindex[n]+1, range2str(rx, smt), gid, mem2str(rx), apps.index(nm)))
-                    gid += 1
-                else:
-                    f.write("rank: %d: { host: %d; cpu: %s ; mem: %s } : app %d\n"\
-                        %(rankindex[rank], nodeindex[n]+1, range2str(rx, smt), mem2str(rx), apps.index(nm)))
-                rank += 1
-            gid = 0
-            m0index = 0
-            m1index = 0
-        m += nnodes
-
+            rank += 1
     f.close()
 
     logging.info('Saved: %s' % outfile)
