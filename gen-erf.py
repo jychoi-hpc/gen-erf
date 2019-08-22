@@ -249,7 +249,7 @@ def main():
 
     if sortbyapp:
         aid = [ apps.index(x) for x in ax ]
-        rankindex = rankindex[np.argsort(aid, kind='stable')]
+        rankindex = rankindex[np.argsort(aid, kind='mergesort')]
         ax = ax[np.argsort(rankindex)]
 
     f = open(outfile, "w")
