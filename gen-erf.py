@@ -40,9 +40,10 @@ def process_single(exp):
         count = int(tk[3])
     
     lst = list()
-    for i in range(count):
-        lst.append(tuple((offset, offset+block)))
-        offset += (block+stride)
+    if block+stride > 0:
+        for i in range(count):
+            lst.append(tuple((offset, offset+block)))
+            offset += (block+stride)
     
     return (lst)
 
@@ -265,7 +266,7 @@ def main():
     rank = 0
     for item in item_all:
         for rx, nm, g, n, gid, mx in item:
-            print (rx, nm, g, n, gid, mx)
+            #print (rx, nm, g, n, gid, mx)
             if g == 1:
                 f.write("rank: %d: { host: %d; cpu: %s ; gpu: {%d} ; mem: %s } : app %d\n"\
                     %(rankindex[rank], nodeindex[n]+1, range2str(rx, smt), gid, mx, apps.index(nm)))
